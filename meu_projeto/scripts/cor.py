@@ -14,7 +14,10 @@ from geometry_msgs.msg import Twist, Vector3, Pose
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
-import cormodule as cormodule
+import cormodule
+import le_scan
+from sensor_msgs.msg import LaserScan
+
 
 
 bridge = CvBridge()
@@ -79,7 +82,7 @@ if __name__=="__main__":
 	# 
 	# 	rosrun topic_tools relay /raspicam_node/image/compressed /kamera
 	# 
-
+	scan_sub = rospy.Subscriber("/scan", LaserScan, le_scan.scaneou)
 	recebedor = rospy.Subscriber(topico_imagem, CompressedImage, roda_todo_frame, queue_size=4, buff_size = 2**24)
 	print("Usando ", topico_imagem)
 
@@ -89,14 +92,37 @@ if __name__=="__main__":
 
 		while not rospy.is_shutdown():
 			vel = Twist(Vector3(0,0,0), Vector3(0,0,0))
+		
 			if len(media) != 0 and len(centro) != 0:
-				print("Média dos vermelhos: {0}, {1}".format(media[0], media[1]))
-				print("Centro dos vermelhos: {0}, {1}".format(centro[0], centro[1]))
+				#print("Média dos vermelhos: {0}, {1}".format(media[0], media[1]))
+				#print("Centro dos vermelhos: {0}, {1}".format(centro[0], centro[1]))
+				print(le_scan.menor_distancia)
+
 
 				if (media[0] > centro[0]):
-					vel = Twist(Vector3(0,0,0), Vector3(0,0,-0.1))
+					twist = -0.1 
+					vel = Twist(Vector3(0,0,0), Vector3(0,0,twist))
 				if (media[0] < centro[0]):
-					vel = Twist(Vector3(0,0,0), Vector3(0,0,0.1))
+					twist = 0.1
+					vel = Twist(Vector3(0,0,0), Vector3(0,0,twist))
+				if ( centro[0]-10 <= media[0] <= centro[0]+10):
+					if (le_scan.menor_distancia > 2.0):
+						vel = Twist(Vector3(0.5,0,0), Vector3(0,0,0))
+					elif (le_scan.menor_distancia > 1.0):
+						vel = Twist(Vector3(0.2,0,0), Vector3(0,0,0))
+					elif (le_scan.menor_distancia > 0.5):
+						vel = Twist(Vector3(0.1,0,0), Vector3(0,0,0))
+					
+					elif (le_scan.menor_distancia > 0.2):
+						vel = Twist(Vector3(0.09,0,0), Vector3(0,0,0))
+
+					elif (le_scan.menor_distancia > 0.15):
+						vel = Twist(Vector3(0,0,0), Vector3(0,0,0))
+
+				else:
+					vel = Twist(Vector3(0,0,0), Vector3(0,0,twist))
+
+
 			velocidade_saida.publish(vel)
 			rospy.sleep(0.1)
 
